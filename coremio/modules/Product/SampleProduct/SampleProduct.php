@@ -135,16 +135,316 @@
             ];
         }
 
+        /**
+         * (Not Required) When a product addon is purchased, you can use this function if you need to perform an action on the module according to the purchased addon.
+         * @param array $addon Transmits the data of the linked row in the users_products_addons table in the database.
+         * @deprecated  array $args Will be deprecated after 3.2.
+         * @return bool|array If you return an array as a return value, it stores this array as JSON in the "module_data" column of the corresponding row in the "users_products_addons" table in the database. If you don't need to store data, you can return bool data depending on the transaction state.
+         */
+        public function addon_create($addon=[], $args=[]):bool|array
+        {
+            $entity_id  = $this->order["options"]["config"]["id"] ?? 0;
+
+            if(!$entity_id)
+            {
+                $this->error = "The connected service is not yet established.";
+                return false;
+            }
+
+            $values = $this->id_of_conf_opt[$addon['id']] ?? [];
+
+            // Sample: Buy Backup
+            if(($values["Backup"] ?? []))
+            {
+                #$value = $values["Backup"]; // Ex: "Daily" or "Weekly"
+                #$response = $this->api->EnableBackup($entity_id,$value);
+                $response    = ['status' => "successful"];
+                if(!$response)
+                {
+                    $this->error = $this->api->error;
+                    return false;
+                }
+                return true;
+            }
+
+            // Sample: Buy Extra IP Address
+            elseif(($values["ExtraIP"] ?? []))
+            {
+
+                #$value = $values["ExtraIP"]; //  Ex: "5","10","15"
+                #$response = $this->api->AddExtraIPAddress($value,$entity_id);
+                $response    = [
+                    'id' => 123,
+                    'status' => "successful",
+                    'data' => [
+                        '192.168.1.1',
+                        '192.168.1.2',
+                        '192.168.1.3',
+                    ],
+                ];
+
+                if(!$response)
+                {
+                    $this->error = $this->api->error;
+                    return false;
+                }
+
+                // Updating the IP addresses assigned to the order
+                $options = $this->order["options"] ?? [];
+                $assigned_ips = explode("\n",$options["assigned_ips"] ?? '');
+                foreach($response["data"] AS $ip) $assigned_ips[] = $ip;
+                $options["assigned_ips"] = implode("\n",$assigned_ips);
+                Orders::set($this->order["id"],['options' => Utility::jencode($options)]);
+
+                // Return addon module_data
+                return [
+                    'id' => $response["id"]
+                ];
+            }
+
+            return true;
+        }
+        /**
+         * (Not Required) Use this function if you also want to take action on the module when the status of the ordered product addon is suspended.
+         * @param array $addon Transmits the data of the linked row in the users_products_addons table in the database.
+         * @deprecated array $args Will be deprecated after 3.2.
+         * @return bool|array If you return an array as a return value, it stores this array as JSON in the "module_data" column of the corresponding row in the "users_products_addons" table in the database. If you don't need to store data, you can return bool data depending on the transaction state.
+         */
+        public function addon_suspend($addon=[],$args=[])
+        {
+            $entity_id  = $this->order["options"]["config"]["id"] ?? 0;
+            if(!$entity_id) return true;
+
+            $values         = $this->id_of_conf_opt[$addon['id']] ?? [];
+            $module_data    = $addon['module_data'] ?? [];
+
+            // Sample: Suspend Backup
+            if(($values["Backup"] ?? []))
+            {
+                #$response = $this->api->DisableBackup($entity_id);
+                $response    = ['status' => "successful"];
+                if(!$response)
+                {
+                    $this->error = $this->api->error;
+                    return false;
+                }
+                return true;
+            }
+
+            // Sample: Suspend Extra IP Address
+            elseif(($values["ExtraIP"] ?? []))
+            {
+                #$id = $module_data["id"] ?? 0;
+                #$response = $this->api->DisableExtraIPAddress($id);
+                $response    = ['status' => "successful"];
+
+                if(!$response)
+                {
+                    $this->error = $this->api->error;
+                    return false;
+                }
+                return true;
+            }
+
+            return true;
+        }
+
+        /**
+         * (Not Required) Use this function if you also want to take action on the module when the status of the ordered product addon is unsuspended.
+         * @param array $addon Transmits the data of the linked row in the users_products_addons table in the database.
+         * @deprecated array $args Will be deprecated after 3.2.
+         * @return bool|array If you return an array as a return value, it stores this array as JSON in the "module_data" column of the corresponding row in the "users_products_addons" table in the database. If you don't need to store data, you can return bool data depending on the transaction state.
+         */
+
+        public function addon_unsuspend($addon=[],$args=[])
+        {
+            $entity_id  = $this->order["options"]["config"]["id"] ?? 0;
+            if(!$entity_id) return true;
+
+            $values         = $this->id_of_conf_opt[$addon['id']] ?? [];
+            $module_data    = $addon['module_data'] ?? [];
+
+            // Sample: Unsuspend Backup
+            if(($values["Backup"] ?? []))
+            {
+                #$response = $this->api->EnableBackup($entity_id);
+                $response    = ['status' => "successful"];
+                if(!$response)
+                {
+                    $this->error = $this->api->error;
+                    return false;
+                }
+                return true;
+            }
+
+            // Sample: Unsuspend Extra IP Address
+            elseif(($values["ExtraIP"] ?? []))
+            {
+                #$id = $module_data["id"] ?? 0;
+                #$response = $this->api->EnableExtraIPAddress($id);
+                $response    = [
+                    'status' => "successful",
+                ];
+
+                if(!$response)
+                {
+                    $this->error = $this->api->error;
+                    return false;
+                }
+                return true;
+            }
+
+            return true;
+        }
+
+        /**
+         * (Not Required) Use this function if you also want to take action on the module when the status of the ordered product addon is cancelled.
+         * @param array $addon Transmits the data of the linked row in the users_products_addons table in the database.
+         * @deprecated array $params Will be deprecated after 3.2.
+         * @return bool|array If you return an array as a return value, it stores this array as JSON in the "module_data" column of the corresponding row in the "users_products_addons" table in the database. If you don't need to store data, you can return bool data depending on the transaction state.
+         */
+        public function addon_cancelled($addon=[],$params=[])
+        {
+            $entity_id  = $this->order["options"]["config"]["id"] ?? 0;
+            if(!$entity_id) return true;
+
+            $values         = $this->id_of_conf_opt[$addon['id']] ?? [];
+            $module_data    = $addon['module_data'] ?? [];
+
+            // Sample: Cancel Backup
+            if(($values["Backup"] ?? []))
+            {
+                #$response = $this->api->CancelBackup($entity_id);
+                $response    = ['status' => "successful"];
+                if(!$response)
+                {
+                    $this->error = $this->api->error;
+                    return false;
+                }
+                return true;
+            }
+
+            // Sample: Cancel Extra IP Address
+            elseif(($values["ExtraIP"] ?? []))
+            {
+                #$id = $module_data["id"] ?? 0;
+                #$response = $this->api->CancelExtraIPAddress($id);
+                $response    = [
+                    'status' => "successful",
+                    'ip_addresses' => [
+                        '192.168.1.1',
+                        '192.168.1.2',
+                        '192.168.1.3',
+                    ],
+                ];
+
+                if(!$response)
+                {
+                    $this->error = $this->api->error;
+                    return false;
+                }
+
+                $options = $this->order["options"] ?? [];
+                $assigned_ips = explode("\n",$options["assigned_ips"] ?? '');
+                // Clear ips
+                foreach($response["ip_addresses"] AS $ip)
+                    if(in_array($ip,$assigned_ips))
+                        unset($assigned_ips[array_search($ip,$assigned_ips)]);
+                $options["assigned_ips"] = implode("\n",$assigned_ips);
+                Orders::set($this->order["id"],['options' => Utility::jencode($options)]);
+                return [];
+            }
+
+            return true;
+        }
+
+        /**
+         * (Not Required) Use this function if you also want to take action on the module when the details of the ordered product addon is changed.
+         * @param array $addon Transmits the data of the linked row in the users_products_addons table in the database.
+         * @param array $args Database "users_products_addons" table after modification of the related row
+         * @return bool|array If you return an array as a return value, it stores this array as JSON in the "module_data" column of the corresponding row in the "users_products_addons" table in the database. If you don't need to store data, you can return bool data depending on the transaction state.
+         */
+
+        public function addon_change($addon=[],$args=[])
+        {
+            $entity_id  = $this->order["options"]["config"]["id"] ?? 0;
+            if(!$entity_id) return true;
+
+            $values         = $this->id_of_conf_opt[$addon['id']] ?? [];
+            $module_data    = $addon['module_data'] ?? [];
+
+
+            // Sample: Change Extra IP Address
+            if(($values["ExtraIP"] ?? []))
+            {
+                $q      = (int) $args["option_quantity"] ?? 0;
+                #$id = $module_data["id"] ?? 0;
+                #$response = $this->api->ChangeIPAddressCount($id,$q);
+                $response    = [
+                    'status' => "successful",
+                    'data' => [
+                        '192.168.1.1',
+                        '192.168.1.2',
+                        '192.168.1.3',
+                    ],
+                ];
+
+                if(!$response)
+                {
+                    $this->error = $this->api->error;
+                    return false;
+                }
+
+                // Updating the IP addresses assigned to the order
+                $options = $this->order["options"] ?? [];
+                $assigned_ips = explode("\n",$options["assigned_ips"] ?? '');
+                foreach($response["data"] AS $ip) if(!in_array($ip,$assigned_ips)) $assigned_ips[] = $ip;
+                $options["assigned_ips"] = implode("\n",$assigned_ips);
+                Orders::set($this->order["id"],['options' => Utility::jencode($options)]);
+
+                return true;
+            }
+
+            return true;
+        }
+
         public function create($order_options=[])
         {
+            # Parameters Docs: https://docs.wisecp.com/en/kb/product-module-development-parameters
+
             try
             {
-                /*
-                 * $order_options or $this->order["options"]
-                * for parameters: https://docs.wisecp.com/en/kb/product-module-development-parameters
-                * Here are the codes to be sent to the API...
-                */
-                $result = "OK";
+                // API POST Parameters
+                $api_post_data = [
+                    'example1' => $order_options["creation_info"]["example1"],
+                    'example2' => $order_options["creation_info"]["example2"],
+                    'example3' => $order_options["creation_info"]["example3"],
+                ];
+
+                // Fetch configurable options (Optional)
+                if($this->val_of_conf_opt["ExtraIP"] ?? false)
+                    $api_post_data["ExtraIP"] = $this->val_of_conf_opt["ExtraIP"];
+
+                // Fetch requirement (Optional)
+                if($this->val_of_requirements["Example1"] ?? false)
+                    $api_post_data["example1"] = $this->val_of_requirements["Example1"];
+
+                # API call code here...
+
+                $api_response = [
+                    'status' => "successful",
+                    'id' => 1234,
+                ];
+
+                if($api_response["status"] != "successful") throw new Exception($api_response["message"]);
+
+
+                return [
+                    'config' => [
+                        'id' => $api_response['id'],
+                    ],
+                ];
+
             }
             catch (Exception $e){
                 $this->error = $e->getMessage();
@@ -156,32 +456,27 @@
                     $e->getMessage(),
                     $e->getTraceAsString()
                 );
-                return false;
-            }
-
-            /*
-            * Error Result:
-            * $result             = "Failed to create server, something went wrong.";
-            */
-            if(substr($result,0,2) == 'OK')
-                return true; /* boolean or array [ 'config' => [...],'creation_info' => [...],]  */
-            else
-            {
-                $this->error = $result;
                 return false;
             }
         }
 
         public function renewal($order_options=[])
         {
+            # Parameters Docs: https://docs.wisecp.com/en/kb/product-module-development-parameters
+
+            $entity_id = $order_options["config"]["id"] ?? 0;
+
             try
             {
-                /*
-                 * $order_options or $this->order["options"]
-                * for parameters: https://docs.wisecp.com/en/kb/product-module-development-parameters
-                * Here are the codes to be sent to the API...
-                */
-                $result = "OK";
+                if(!$entity_id) throw new Exception("Entity ID not found.");
+
+                // API submit code here...
+                #$response = $this->api->renewal($entity_id);
+                $response = ['status' => "successful"];
+
+                if($response["status"] != "successful") throw new Exception($response["message"]);
+
+                return true;
             }
             catch (Exception $e){
                 $this->error = $e->getMessage();
@@ -193,40 +488,33 @@
                     $e->getMessage(),
                     $e->getTraceAsString()
                 );
-                return false;
-            }
-
-            /*
-            * Error Result:
-            * $result             = "Failed to create server, something went wrong.";
-            */
-            if(substr($result,0,2) == 'OK')
-                return true; /* boolean or array [ 'config' => [...],'creation_info' => [...],]  */
-            else
-            {
-                $this->error = $result;
                 return false;
             }
         }
 
         public function apply_updowngrade($product=[]){
-            $o_config               = $this->options["config"];
-            $o_creation_info        = $this->options["creation_info"];
+            # Parameters Docs: https://docs.wisecp.com/en/kb/product-module-development-parameters
+            $o_config               = $this->order["options"]["config"];
+            $o_creation_info        = $this->order["options"]["creation_info"];
             $p_creation_info        = $product["module_data"];
+
+            $entity_id              = $o_config["id"] ?? 0;
 
             try
             {
-                /*
-                 * $this->order["options"]
-                * for parameters: https://docs.wisecp.com/en/kb/product-module-development-parameters
-                * Here are the codes to be sent to the API...
-                 *
+                if(!$entity_id) throw new Exception("Entity ID not found.");
+
                 $params                 = [
-                    ...
+                    'example1'  => $p_creation_info["example1"],
+                    'example2'  => $p_creation_info["example2"],
                 ];
 
-                */
-                $result = "OK"; # $api->upgrade($params);
+                $result = ['status' => "successful"]; # $api->upgrade($params);
+
+                if($result["status"] != "successful") throw new Exception($result["message"]);
+
+
+                return true;
             }
             catch (Exception $e){
                 $this->error = $e->getMessage();
@@ -238,33 +526,24 @@
                     $e->getMessage(),
                     $e->getTraceAsString()
                 );
-                return false;
-            }
-
-            /*
-            * Error Result:
-            * $result             = "Error Message";
-            */
-
-            if($result == 'OK')
-                return true;
-            else
-            {
-                $this->error = $result;
                 return false;
             }
         }
 
         public function suspend()
         {
+            # Parameters Docs: https://docs.wisecp.com/en/kb/product-module-development-parameters
+            $entity_id              = $this->order["options"]["config"]["id"] ?? 0;
+
             try
             {
-                /*
-                 * $this->order["options"]
-                * for parameters: https://docs.wisecp.com/en/kb/product-module-development-parameters
-                * Here are the codes to be sent to the API...
-                */
-                $result             = "OK";
+                if(!$entity_id) throw new Exception("Entity ID not found.");
+                #$result = $this->api->suspend($entity_id);
+                $result = ['status' => "successful"];
+
+                if($result["status"] != "successful") throw new Exception($result["message"]);
+
+                return true;
             }
             catch (Exception $e){
                 $this->error = $e->getMessage();
@@ -276,32 +555,23 @@
                     $e->getMessage(),
                     $e->getTraceAsString()
                 );
-                return false;
-            }
-            /*
-            * Error Result:
-            * $result             = "Error Message";
-            */
-
-            if($result == 'OK')
-                return true;
-            else
-            {
-                $this->error = $result;
                 return false;
             }
         }
 
         public function unsuspend()
         {
+            # Parameters Docs: https://docs.wisecp.com/en/kb/product-module-development-parameters
+            $entity_id              = $this->order["options"]["config"]["id"] ?? 0;
+
             try
             {
-                /*
-                 * $this->order["options"]
-                * for parameters: https://docs.wisecp.com/en/kb/product-module-development-parameters
-                * Here are the codes to be sent to the API...
-                */
-                $result = "OK";
+                if(!$entity_id) throw new Exception("Entity ID not found.");
+                #$result = $this->api->unsuspend($entity_id);
+                $result = ['status' => "successful"];
+                if($result["status"] != "successful") throw new Exception($result["message"]);
+
+                return true;
             }
             catch (Exception $e){
                 $this->error = $e->getMessage();
@@ -313,33 +583,23 @@
                     $e->getMessage(),
                     $e->getTraceAsString()
                 );
-                return false;
-            }
-
-            /*
-            * Error Result:
-            * $result             = "Error Message";
-            */
-
-            if($result == 'OK')
-                return true;
-            else
-            {
-                $this->error = $result;
                 return false;
             }
         }
 
         public function delete()
         {
+            # Parameters Docs: https://docs.wisecp.com/en/kb/product-module-development-parameters
+            $entity_id              = $this->order["options"]["config"]["id"] ?? 0;
             try
             {
-                /*
-                 * $this->order["options"]
-                * for parameters: https://docs.wisecp.com/en/kb/product-module-development-parameters
-                * Here are the codes to be sent to the API...
-                */
-                $result = "OK";
+                if(!$entity_id) throw new Exception("Entity ID not found.");
+                #$result = $this->api->delete($entity_id);
+                $result = ['status' => "successful"];
+
+                if($result["status"] != "successful") throw new Exception($result["message"]);
+
+                return true;
             }
             catch (Exception $e){
                 $this->error = $e->getMessage();
@@ -353,23 +613,12 @@
                 );
                 return false;
             }
-
-            /*
-            * Error Result:
-            * $result             = "Error Message";
-            */
-
-            if($result == 'OK')
-                return true;
-            else
-            {
-                $this->error = $result;
-                return false;
-            }
         }
 
         public function clientArea()
         {
+            # Parameters Docs: https://docs.wisecp.com/en/kb/product-module-development-parameters
+            $entity_id  = $this->order["options"]["config"]["id"] ?? 0;
             $content    = $this->clientArea_buttons_output();
             $_page      = $this->page;
 
@@ -534,8 +783,8 @@
 
         public function adminArea_service_fields(){
             $c_info                 = $this->options["creation_info"];
-            $field1                 = isset($c_info["field1"]) ? $c_info["field1"] : NULL;
-            $field2                 = isset($c_info["field2"]) ? $c_info["field2"] : NULL;
+            $field1                 = $c_info["field1"] ?? null;
+            $field2                 = $c_info["field2"] ?? null;
 
             return [
                 'field1'                => [
@@ -550,7 +799,7 @@
                     'wrap_width'        => 100,
                     'name'              => "Field 2",
                     'type'              => "output",
-                    'value'             => '<input type="text" name="creation_info[field2]" value="'.$field2.'">',
+                    'value'             => '<input type="number" name="creation_info[field2]" value="'.$field2.'">',
                 ],
             ];
         }
